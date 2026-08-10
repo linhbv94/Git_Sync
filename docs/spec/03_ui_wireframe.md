@@ -175,7 +175,7 @@ Khi người dùng chọn `5` từ Menu chính:
 
 ```text
 ======================================================================
-⚡ GIT MULTI-SYNC TOOL - CẤU HỒNG HỆ THỐNG
+⚡ GIT MULTI-SYNC TOOL - THAY ĐỔI CẤU HÌNH QUÉT
 ======================================================================
 Đường dẫn file: /path/to/Application Support/git_sync/config.json
 
@@ -183,9 +183,10 @@ Cấu hình hiện tại:
   [1] Thư mục quét (scan_path): /Users/vic/_Work/zTool
   [2] Danh sách ignore (ignore_list): ["node_modules", "venv", ".venv"]
   [3] Độ sâu quét tối đa (max_depth): 3
-  [4] Trở về Menu chính
+  [4] Ngôn ngữ hiển thị (lang): vi (Tiếng Việt)
+  [5] Trở về Menu chính
 
-Nhập số tương ứng để chỉnh sửa (1/2/3/4): 1
+Nhập số tương ứng để chỉnh sửa (1/2/3/4/5): _
 
 [SỬA THƯ MỤC QUÉT]
 Nhập đường dẫn tuyệt đối mới (Ví dụ: /Users/vic/Projects): /Users/vic/_Work/another_workspace_
