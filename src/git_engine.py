@@ -3,7 +3,7 @@ import shutil
 import os
 from pathlib import Path
 from dataclasses import dataclass, field
-from typing import Tuple, List, Dict, Any
+from typing import Tuple, List, Dict, Any, Optional
 
 GIT_LOCALIZED = {
     "en": {
@@ -85,16 +85,33 @@ class GitEngine:
             return out
         return "HEAD"
 
-    def get_remote_url(self, repo_path: Path) -> str:
-        code, out, _ = self.run_cmd(["remote", "get-url", "origin"], cwd=repo_path)
+    def resolve_remote_name(self, repo_path: Path, branch: str) -> Optional[str]:
+        # 1. Check if the current branch has a tracking remote configured
+        code, out, _ = self.run_cmd(["config", "--get", f"branch.{branch}.remote"], cwd=repo_path)
+        if code == 0 and out.strip():
+            return out.strip()
+        
+        # 2. Check if remote 'origin' exists
+        code, out, _ = self.run_cmd(["remote"], cwd=repo_path)
         if code == 0 and out:
-            return out
+            remotes = [r.strip() for r in out.splitlines() if r.strip()]
+            if "origin" in remotes:
+                return "origin"
+            # 3. Use the first available remote
+            if remotes:
+                return remotes[0]
+        return None
+
+    def get_remote_url(self, repo_path: Path, remote_name: str) -> str:
+        code, out, _ = self.run_cmd(["remote", "get-url", remote_name], cwd=repo_path)
+        if code == 0 and out:
+            return out.strip()
         return ""
 
-    def fetch_remote(self, repo_path: Path, branch: str, lang: str = "en", timeout: int = 10) -> Tuple[bool, str, str]:
-        """Runs git fetch origin <branch>. Returns (success, error_type, error_msg)."""
+    def fetch_remote(self, repo_path: Path, remote_name: str, branch: str, lang: str = "en", timeout: int = 10) -> Tuple[bool, str, str]:
+        """Runs git fetch <remote_name> <branch>. Returns (success, error_type, error_msg)."""
         l = GIT_LOCALIZED.get(lang, GIT_LOCALIZED["en"])
-        code, out, err = self.run_cmd(["fetch", "origin", branch], cwd=repo_path, timeout=timeout)
+        code, out, err = self.run_cmd(["fetch", remote_name, branch], cwd=repo_path, timeout=timeout)
         if code == 0:
             return True, "", ""
         
@@ -119,7 +136,8 @@ class GitEngine:
             return GitStatusResult(sync_state="ERROR", is_dirty=False, error_message=l["no_git_repo"])
 
         branch = self.get_current_branch(repo_path)
-        remote_url = self.get_remote_url(repo_path)
+        remote_name = self.resolve_remote_name(repo_path, branch)
+        remote_url = self.get_remote_url(repo_path, remote_name) if remote_name else ""
 
         # Check working tree status (Dirty or Clean)
         code, status_out, _ = self.run_cmd(["status", "--porcelain"], cwd=repo_path)
@@ -137,7 +155,7 @@ class GitEngine:
             dirty_files.append(line_str)
         is_dirty = len(dirty_files) > 0
 
-        if not remote_url:
+        if not remote_url or not remote_name:
             return GitStatusResult(
                 sync_state="NO_REMOTE",
                 is_dirty=is_dirty,
@@ -147,7 +165,7 @@ class GitEngine:
             )
 
         # Try to fetch
-        fetch_success, err_type, err_msg = self.fetch_remote(repo_path, branch, lang, timeout)
+        fetch_success, err_type, err_msg = self.fetch_remote(repo_path, remote_name, branch, lang, timeout)
 
         if not fetch_success:
             if err_type in ("OFFLINE", "TIMEOUT"):
@@ -165,8 +183,8 @@ class GitEngine:
                 error_message=err_msg
             )
 
-        # Compare HEAD with origin/<branch>
-        code, rev_out, _ = self.run_cmd(["rev-list", "--left-right", "--count", f"HEAD...origin/{branch}"], cwd=repo_path)
+        # Compare HEAD with <remote_name>/<branch>
+        code, rev_out, _ = self.run_cmd(["rev-list", "--left-right", "--count", f"HEAD...{remote_name}/{branch}"], cwd=repo_path)
         
         ahead = 0
         behind = 0
@@ -176,11 +194,11 @@ class GitEngine:
                 ahead = int(parts[0])
                 behind = int(parts[1])
         else:
-            # If the branch does not exist on origin yet, it's a new local branch.
-            # We can check if origin/<branch> exists
-            check_code, _, _ = self.run_cmd(["rev-parse", "--verify", f"origin/{branch}"], cwd=repo_path)
+            # If the branch does not exist on remote yet, it's a new local branch.
+            # We can check if remote_name/branch exists
+            check_code, _, _ = self.run_cmd(["rev-parse", "--verify", f"{remote_name}/{branch}"], cwd=repo_path)
             if check_code != 0:
-                # Origin branch doesn't exist ➔ ahead by current local commits
+                # Remote branch doesn't exist ➔ ahead by current local commits
                 commit_code, commit_count, _ = self.run_cmd(["rev-list", "--count", "HEAD"], cwd=repo_path)
                 if commit_code == 0 and commit_count:
                     ahead = int(commit_count)
@@ -207,23 +225,26 @@ class GitEngine:
 
     def execute_smart_pull(self, repo_path: Path, branch: str, lang: str = "en") -> Tuple[bool, str]:
         l = GIT_LOCALIZED.get(lang, GIT_LOCALIZED["en"])
-        code, out, err = self.run_cmd(["pull", "--ff-only", "origin", branch], cwd=repo_path)
+        remote_name = self.resolve_remote_name(repo_path, branch) or "origin"
+        code, out, err = self.run_cmd(["pull", "--ff-only", remote_name, branch], cwd=repo_path)
         if code == 0:
             return True, l["pull_ok"]
         return False, l["pull_ff_err"].format(err)
 
     def execute_smart_push(self, repo_path: Path, branch: str, lang: str = "en") -> Tuple[bool, str]:
         l = GIT_LOCALIZED.get(lang, GIT_LOCALIZED["en"])
-        code, out, err = self.run_cmd(["push", "origin", branch], cwd=repo_path)
+        remote_name = self.resolve_remote_name(repo_path, branch) or "origin"
+        code, out, err = self.run_cmd(["push", remote_name, branch], cwd=repo_path)
         if code == 0:
             return True, l["push_ok"]
         return False, l["push_err"].format(err)
 
     def execute_commit_and_push(self, repo_path: Path, branch: str, lang: str = "en") -> Tuple[bool, str]:
         l = GIT_LOCALIZED.get(lang, GIT_LOCALIZED["en"])
+        remote_name = self.resolve_remote_name(repo_path, branch) or "origin"
         self.run_cmd(["add", "."], cwd=repo_path)
         self.run_cmd(["commit", "-m", "auto sync: local updates"], cwd=repo_path)
-        code, out, err = self.run_cmd(["push", "origin", branch], cwd=repo_path)
+        code, out, err = self.run_cmd(["push", remote_name, branch], cwd=repo_path)
         if code == 0:
             return True, l["push_ok"]
         return False, l["push_err"].format(err)
