@@ -148,9 +148,12 @@ stateDiagram-v2
     MAIN_DASHBOARD --> EDIT_CONFIG : Chọn [5] Sửa cấu hình
     EDIT_CONFIG --> MAIN_DASHBOARD : Lưu cấu hình mới thành công
     
+    MAIN_DASHBOARD --> OPEN_CONFIG_DIR : Chọn [6] Mở thư mục cấu hình
+    OPEN_CONFIG_DIR --> MAIN_DASHBOARD : Mở thư mục thành công (Explorer/Finder)
+    
     MAIN_DASHBOARD --> SMART_SYNCING : Chọn [1]/[2]/[3] Smart Sync
     SMART_SYNCING --> MAIN_DASHBOARD : Đồng bộ hoàn tất ➔ Nhấn Enter
-    MAIN_DASHBOARD --> [*] : Chọn [6] Thoát
+    MAIN_DASHBOARD --> [*] : Chọn [7] Thoát
 ```
 
 ---

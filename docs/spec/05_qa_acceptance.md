@@ -89,6 +89,15 @@ And in cảnh báo: `tools/tool_2: Bị bỏ qua do Trạng thái Git là [DIVER
 And ghi nhận log yêu cầu người dùng xử lý xung đột bằng tay (Manual merge required)
 ```
 
+### Kịch bản 6: Mở thư mục chứa tệp cấu hình hệ thống
+```gherkin
+Given người dùng đang ở giao diện Dashboard chính
+When người dùng chọn phím `6` (Mở thư mục cấu hình)
+Then chương trình khởi chạy lệnh mở thư mục hệ thống tương ứng (open/explorer)
+And hiển thị cửa sổ Explorer/Finder trỏ tới thư mục chứa tệp cấu hình hệ thống
+And Dashboard chính tiếp tục hiển thị và chờ người dùng nhập lệnh tiếp theo
+```
+
 ---
 
 ## 2. Ma trận Edge Cases & Validation Rules

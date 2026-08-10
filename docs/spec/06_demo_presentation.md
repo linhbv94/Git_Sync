@@ -59,3 +59,9 @@
 *   **Hành động:** Chọn phím `5` (Edit Config), chọn `1` (Sửa scan_path) và nhập đường dẫn mới.
 *   **Điểm cần nhấn mạnh:**
     *   *“Tool cho phép người dùng thay đổi thư mục quét, danh sách ignore và cả độ sâu quét max_depth trực quan ngay trên menu CLI mà không cần mở file json cấu hình.”*
+
+### Bước 6: Mở thư mục cấu hình hệ thống (Open Config Directory)
+*   **Hành động:** Chọn phím `6` (Mở thư mục cấu hình) trên Menu Dashboard.
+*   **Điểm cần nhấn mạnh (Talking Points):**
+    *   *“Người dùng có thể mở trực tiếp thư mục lưu trữ cấu hình hệ thống bằng cách nhấn phím số `6`.”*
+    *   *“Hệ thống tự động chạy lệnh tương ứng với OS (open/explorer) để mở Finder trên macOS hoặc File Explorer trên Windows trỏ thẳng vào thư mục chứa tệp `config.json` để tiện lợi cho việc sửa đổi thủ công.”*

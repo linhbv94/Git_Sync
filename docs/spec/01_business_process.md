@@ -15,9 +15,10 @@ graph TB
     subgraph User_Lane [Người Dùng]
         U1[Khởi động CLI Tool] --> U2[Xem Dashboard Trạng thái các Repo]
         U2 --> U3{Chọn hành động trong Menu}
-        U3 -- Chọn 1: Smart Sync Now --> U4[Hệ thống tự động xử lý]
-        U3 -- Chọn 4: Sửa cấu hình --> U5[Thay đổi scan_path / ignore_list]
-        U3 -- Chọn 6: Thoát --> U6[Kết thúc chương trình]
+        U3 -- Chọn 1: Smart Sync All --> U4[Hệ thống tự động xử lý]
+        U3 -- Chọn 5: Sửa cấu hình --> U5[Thay đổi cấu hình]
+        U3 -- Chọn 6: Mở thư mục cấu hình --> U5_OPEN[Yêu cầu mở thư mục cấu hình]
+        U3 -- Chọn 7: Thoát --> U6[Kết thúc chương trình]
     end
 
     subgraph App_Engine_Lane [Git Sync Engine]
@@ -55,6 +56,10 @@ graph TB
         %% CONFIG EDITING
         U5 --> E16[Ghi cấu hình mới vào config.json hệ thống]
         E16 --> E2
+        
+        %% OPEN CONFIG FOLDER
+        U5_OPEN --> E17[Chạy lệnh mở thư mục hệ thống: open/explorer]
+        E17 --> U2
     end
 
     subgraph Git_Remote_Lane [Git Remote Repos]

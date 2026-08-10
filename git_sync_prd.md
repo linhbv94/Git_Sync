@@ -130,7 +130,8 @@ Tài liệu PRD này định nghĩa các yêu cầu nghiệp vụ, tính năng k
     *   `[3]` Chỉ Smart Push.
     *   `[4]` Làm mới trạng thái (Refresh).
     *   `[5]` Sửa đổi cấu hình.
-    *   `[6]` Thoát.
+    *   `[6]` Mở thư mục cấu hình.
+    *   `[7]` Thoát.
 5.  **Bước 5: Hoàn tất** ➔ Tool thực hiện các lệnh Git tương ứng, báo cáo kết quả thành công/thất bại và quay lại Dashboard chính.
 
 ---
@@ -149,6 +150,7 @@ Tài liệu PRD này định nghĩa các yêu cầu nghiệp vụ, tính năng k
 | **FR-06** | Tự động Push an toàn | Đối với repo `AHEAD` và Trạng thái file là `CLEAN`, chạy `git push origin <branch>`. | Must-have |
 | **FR-07** | Cấu hình hệ thống tập trung | Đọc và ghi tệp cấu hình `config.json` lưu trữ tại thư mục AppData/Application Support của hệ thống để người dùng chỉnh sửa đường dẫn quét, danh sách bỏ qua, độ sâu quét... | Should-have |
 | **FR-08** | Quy trình Onboarding thiết lập ban đầu | Hiển thị CLI hướng dẫn người dùng cấu hình lần đầu (chọn ngôn ngữ, scan_path, ignore_list đệ quy) và tự động lưu file config hệ thống khi hoàn tất. | Must-have |
+| **FR-09** | Mở thư mục cấu hình | Cho phép người dùng chọn chức năng mở thư mục lưu trữ cấu hình hệ thống bằng File Explorer/Finder của OS để dễ dàng chỉnh sửa thủ công. | Should-have |
 
 ### 2. Non-functional Requirements (Yêu cầu phi chức năng)
 *   **Performance:** Sử dụng lập trình bất đồng bộ để quét và fetch nhiều repo đồng thời. Thời gian kiểm tra 10 repo không vượt quá 5 giây trên môi trường mạng thông thường.

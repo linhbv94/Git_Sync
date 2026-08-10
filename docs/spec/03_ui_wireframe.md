@@ -129,9 +129,10 @@ VUI LÒNG CHỌN CHỨC NĂNG (Nhập số tương ứng rồi nhấn Enter):
   [3] Chỉ Push các Repo bị Ahead (Smart Push Only)
   [4] Quét và làm mới trạng thái (Refresh status)
   [5] Thay đổi cấu hình quét (Edit config)
-  [6] Thoát ứng dụng
+  [6] Mở thư mục cấu hình (Open config folder)
+  [7] Thoát ứng dụng
 
-Lựa chọn của bạn (1/2/3/4/5/6): _
+Lựa chọn của bạn (1/2/3/4/5/6/7): _
 ```
 
 ---
