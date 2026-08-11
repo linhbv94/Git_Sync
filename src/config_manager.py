@@ -98,8 +98,8 @@ class ConfigManager:
                 break
             tool_dir = tool_dir.parent
         
-        # Default scan path is the parent workspace containing git_sync / git_auto_sync (e.g. zTools)
-        if tool_dir.name.lower() in ("git_sync", "git-sync", "git_auto_sync", "git-auto-sync") and tool_dir.parent != tool_dir:
+        # Default scan path is the parent workspace containing git_sync / git_multi_sync (e.g. zTools)
+        if tool_dir.name.lower() in ("git_sync", "git-sync", "git_auto_sync", "git-auto-sync", "git_multi_sync", "git-multi-sync") and tool_dir.parent != tool_dir:
             default_dir = tool_dir.parent
         else:
             default_dir = tool_dir
