@@ -242,9 +242,26 @@ class GitEngine:
     def execute_commit_and_push(self, repo_path: Path, branch: str, lang: str = "en") -> Tuple[bool, str]:
         l = GIT_LOCALIZED.get(lang, GIT_LOCALIZED["en"])
         remote_name = self.resolve_remote_name(repo_path, branch) or "origin"
-        self.run_cmd(["add", "."], cwd=repo_path)
-        self.run_cmd(["commit", "-m", "auto sync: local updates"], cwd=repo_path)
-        code, out, err = self.run_cmd(["push", remote_name, branch], cwd=repo_path)
-        if code == 0:
+        code_add, _, err_add = self.run_cmd(["add", "."], cwd=repo_path)
+        if code_add != 0:
+            return False, f"Git add failed: {err_add}"
+        
+        code_cm, out_cm, err_cm = self.run_cmd(["commit", "-m", "auto sync: local updates"], cwd=repo_path)
+        if code_cm != 0:
+            # Fallback: if Git user identity is not set globally, provide inline author flags
+            combined_err = (err_cm + " " + out_cm).lower()
+            if "tell me who you are" in combined_err or "unable to auto-detect email" in combined_err or "identity unknown" in combined_err:
+                username = os.environ.get("USERNAME") or os.environ.get("USER") or "GitSyncUser"
+                email = f"{username}@users.noreply.github.com"
+                code_cm, out_cm, err_cm = self.run_cmd(
+                    ["-c", f"user.name={username}", "-c", f"user.email={email}", "commit", "-m", "auto sync: local updates"],
+                    cwd=repo_path
+                )
+        
+        if code_cm != 0 and "nothing to commit" not in (err_cm + out_cm).lower():
+            return False, f"Git commit failed: {err_cm or out_cm}"
+        
+        code_push, out_push, err_push = self.run_cmd(["push", remote_name, branch], cwd=repo_path)
+        if code_push == 0:
             return True, l["push_ok"]
-        return False, l["push_err"].format(err)
+        return False, l["push_err"].format(err_push)

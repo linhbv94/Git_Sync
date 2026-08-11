@@ -7,8 +7,29 @@ import platform
 import subprocess
 from pathlib import Path
 from typing import List, Tuple, Dict, Any
+
+# Ensure project root directory is in sys.path
+root_dir = Path(__file__).resolve().parent.parent
+if str(root_dir) not in sys.path:
+    sys.path.insert(0, str(root_dir))
+
 from src.config_manager import ConfigManager
 from src.sync_engine import SyncEngine, GitStatusResult
+
+# Enable VT100 ANSI sequences and UTF-8 encoding on Windows console
+if sys.platform == "win32":
+    if hasattr(sys.stdout, "reconfigure"):
+        try:
+            sys.stdout.reconfigure(encoding="utf-8")
+        except Exception:
+            pass
+    try:
+        import ctypes
+        kernel32 = ctypes.windll.kernel32
+        kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 7)
+    except Exception:
+        os.system("")
+
 
 # ANSI Color Codes
 RESET = "\033[0m"
@@ -363,7 +384,7 @@ class MainCLI:
         tasks = []
         for path, status in self.repos_status:
             if status.is_dirty:
-                # If dirty and behind_count == 0, we can run commit & push
+                # If dirty and behind_count == 0 (no pull conflict), auto commit & push
                 if status.behind_count == 0 and status.sync_state in ("UP_TO_DATE", "AHEAD"):
                     if action_type in ("ALL", "PUSH"):
                         tasks.append((path, "COMMIT_PUSH", status.current_branch))

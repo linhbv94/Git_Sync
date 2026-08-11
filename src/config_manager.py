@@ -91,15 +91,18 @@ class ConfigManager:
         else:
             base_path = Path(__file__).resolve()
         
-        # Climb up to find the parent workspace of the tool project
-        tool_dir = base_path
-        while tool_dir.name.lower() in ("git_sync", "dist", "src") or tool_dir.suffix.lower() in (".py", ".exe") or tool_dir.is_file():
+        # Climb up to find the root folder of the git_sync tool
+        tool_dir = base_path.parent if base_path.is_file() else base_path
+        while tool_dir.name.lower() in ("dist", "src") or tool_dir.suffix.lower() in (".py", ".exe"):
             if tool_dir == tool_dir.parent:
                 break
             tool_dir = tool_dir.parent
         
-        # Default is the parent of the tool project directory (e.g. /Users/vic/_Work/zTool -> /Users/vic/_Work)
-        default_dir = tool_dir.parent if tool_dir.parent != tool_dir else tool_dir
+        # Default scan path is the parent workspace containing git_sync / git_auto_sync (e.g. zTools)
+        if tool_dir.name.lower() in ("git_sync", "git-sync", "git_auto_sync", "git-auto-sync") and tool_dir.parent != tool_dir:
+            default_dir = tool_dir.parent
+        else:
+            default_dir = tool_dir
         
         # Fallback to home if default_dir is root
         if default_dir == Path("/"):
