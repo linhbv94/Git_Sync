@@ -24,25 +24,25 @@ class SyncEngine:
             return []
         
         # Check ignore list by directory name
-        if current_dir.name in self.ignore_list:
+        if current_dir.name in self.ignore_list or current_dir.name == ".git":
             return []
         
         # Check ignore list by relative path parts
         try:
             rel_path = current_dir.relative_to(self.scan_path)
-            if any(part in self.ignore_list for part in rel_path.parts):
+            if any(part in self.ignore_list for part in rel_path.parts) or ".git" in rel_path.parts:
                 return []
         except ValueError:
             pass
 
-        # If a .git directory is found, stop scanning deeper under this path
-        if (current_dir / ".git").is_dir():
-            return [current_dir]
-
         repos = []
+        # If a .git directory is found, it is a repository
+        if (current_dir / ".git").is_dir():
+            repos.append(current_dir)
+
         try:
             for child in current_dir.iterdir():
-                if child.is_dir():
+                if child.is_dir() and child.name != ".git":
                     repos.extend(self._recursive_scan(child, current_depth + 1))
         except PermissionError:
             pass  # Skip directories with permission errors
