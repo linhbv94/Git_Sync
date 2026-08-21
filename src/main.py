@@ -52,15 +52,19 @@ LOCALIZED_UI = {
         "col_offset": "Offset",
         "col_action": "Suggested Action",
         "legend": "💡 COLOR CODES EXPLANATION:\n   - RED: Uncommitted changes (Dirty) or Diverged branch.\n   - YELLOW: Behind remote (Behind) or Local commits unpushed (Ahead).\n   - GREEN: Clean and synchronized (Up-to-date).",
-        "menu_title": "PLEASE SELECT FUNCTION (Enter option number and press Enter):",
-        "menu_opt_1": "  [1] Smart Sync All (Pull BEHIND clean, Push AHEAD clean)",
-        "menu_opt_2": "  [2] Smart Pull Only (Pull BEHIND clean)",
-        "menu_opt_3": "  [3] Smart Push Only (Push AHEAD clean)",
-        "menu_opt_4": "  [4] Scan and Refresh Status",
-        "menu_opt_5": "  [5] Edit Scan Configuration",
-        "menu_opt_6": "  [6] Open Config Folder",
-        "menu_opt_7": "  [7] Exit Application",
-        "prompt_choice": "Your choice (1-7): ",
+        "menu_title": "PLEASE SELECT AN OPTION (Type number and press Enter):",
+        "menu_opt_1": "  [1] Smart Sync Now (Pull and Push)",
+        "menu_opt_2": "  [2] Refresh Status",
+        "menu_opt_3": "  [3] Pull/Push Only",
+        "menu_opt_4": "  [4] Edit Config",
+        "menu_opt_5": "  [5] Open Config Folder",
+        "menu_opt_0": "  [0] Exit",
+        "prompt_choice": "Your choice (0-5): ",
+        "submenu_title": "=== PULL / PUSH ONLY ===",
+        "submenu_opt_1": "  [1] Smart Pull Only (Behind repos)",
+        "submenu_opt_2": "  [2] Smart Push Only (Ahead repos)",
+        "submenu_opt_3": "  [3] Back to Main Menu",
+        "submenu_choice": "Your choice (1-3): ",
         "suggest_up_to_date": "Up-to-date",
         "suggest_pull": "Auto Pull",
         "suggest_push": "Auto Push",
@@ -107,14 +111,18 @@ LOCALIZED_UI = {
         "col_action": "Hành động Đề xuất",
         "legend": "💡 GIẢI THÍCH MÃ MÀU:\n   - ĐỎ: Có file sửa đổi chưa commit (Dirty) hoặc lệch nhánh phức tạp (Diverged).\n   - VÀNG: Bị chậm hơn remote (Behind) hoặc có commit cục bộ chưa push (Ahead).\n   - XANH LÁ: Sạch sẽ, đã đồng bộ mới nhất (Up-to-date).",
         "menu_title": "VUI LÒNG CHỌN CHỨC NĂNG (Nhập số tương ứng rồi nhấn Enter):",
-        "menu_opt_1": "  [1] Đồng bộ thông minh toàn bộ (Smart Sync All)",
-        "menu_opt_2": "  [2] Chỉ Pull các Repo bị Behind (Smart Pull Only)",
-        "menu_opt_3": "  [3] Chỉ Push các Repo bị Ahead (Smart Push Only)",
-        "menu_opt_4": "  [4] Quét và làm mới trạng thái (Refresh status)",
-        "menu_opt_5": "  [5] Thay đổi cấu hình quét (Edit config)",
-        "menu_opt_6": "  [6] Mở thư mục cấu hình (Open config folder)",
-        "menu_opt_7": "  [7] Thoát ứng dụng",
-        "prompt_choice": "Lựa chọn của bạn (1-7): ",
+        "menu_opt_1": "  [1] Đồng bộ thông minh ngay (Pull và Push)",
+        "menu_opt_2": "  [2] Làm mới trạng thái",
+        "menu_opt_3": "  [3] Chỉ Pull hoặc Push",
+        "menu_opt_4": "  [4] Sửa cấu hình",
+        "menu_opt_5": "  [5] Mở thư mục cấu hình",
+        "menu_opt_0": "  [0] Thoát",
+        "prompt_choice": "Lựa chọn của bạn (0-5): ",
+        "submenu_title": "=== CHỈ PULL / PUSH (PULL/PUSH ONLY) ===",
+        "submenu_opt_1": "  [1] Chỉ Pull các Repo bị Behind",
+        "submenu_opt_2": "  [2] Chỉ Push các Repo bị Ahead",
+        "submenu_opt_3": "  [3] Quay lại Menu chính",
+        "submenu_choice": "Lựa chọn của bạn (1-3): ",
         "suggest_up_to_date": "Up-to-date",
         "suggest_pull": "Auto Pull",
         "suggest_push": "Auto Push",
@@ -161,6 +169,20 @@ def pad_right(s: str, width: int) -> str:
         return s
     return s + " " * (width - v_len)
 
+def truncate_left(s: str, max_len: int) -> str:
+    if len(s) <= max_len:
+        return s
+    if max_len <= 3:
+        return "..."[:max_len]
+    return "..." + s[-(max_len - 3):]
+
+def truncate_right(s: str, max_len: int) -> str:
+    if len(s) <= max_len:
+        return s
+    if max_len <= 3:
+        return "..."[:max_len]
+    return s[:max_len - 3] + "..."
+
 def open_folder(path: Path) -> None:
     try:
         if platform.system() == "Darwin":
@@ -179,6 +201,7 @@ class MainCLI:
         self.lang = "en"
         self.ui = LOCALIZED_UI["en"]
         self.repos_status: List[Tuple[Path, GitStatusResult]] = []
+        self.total_width = 97
 
     def initialize(self) -> None:
         if not self.config_manager.load_config():
@@ -199,25 +222,45 @@ class MainCLI:
         )
 
     def draw_dashboard(self, elapsed_time: float) -> None:
-        print("\n" + "=" * 97)
+        # Determine dynamic column widths for Project Name and Branch
+        w_proj = 18
+        w_branch = 12
+
+        for path, status in self.repos_status:
+            try:
+                proj_name = str(path.relative_to(self.sync_engine.scan_path))
+            except ValueError:
+                proj_name = path.name
+            w_proj = max(w_proj, len(proj_name))
+            w_branch = max(w_branch, len(status.current_branch))
+
+        # Cap column widths to keep the table layout compact and prevent overflow on extra long paths
+        MAX_PROJ_WIDTH = 40
+        MAX_BRANCH_WIDTH = 20
+        w_proj = min(w_proj, MAX_PROJ_WIDTH)
+        w_branch = min(w_branch, MAX_BRANCH_WIDTH)
+
+        total_width = w_proj + w_branch + 78
+        self.total_width = total_width
+        print("\n" + "=" * total_width)
         print(f"{CYAN}{BOLD}{self.ui['title']}{RESET}")
-        print("=" * 97)
+        print("=" * total_width)
         print(self.ui["scan_path"].format(self.sync_engine.scan_path, self.sync_engine.max_depth))
         print(self.ui["scan_time"].format(elapsed_time, len(self.repos_status)))
-        print()
+        print("=" * total_width)
 
         # Print Table Header
         header = (
-            f"│ {pad_right(self.ui['col_project'], 18)} │ "
-            f"{pad_right(self.ui['col_branch'], 12)} │ "
+            f"│ {pad_right(truncate_left(self.ui['col_project'], w_proj), w_proj)} │ "
+            f"{pad_right(truncate_right(self.ui['col_branch'], w_branch), w_branch)} │ "
             f"{pad_right(self.ui['col_status'], 14)} │ "
             f"{pad_right(self.ui['col_sync'], 14)} │ "
             f"{pad_right(self.ui['col_offset'], 9)} │ "
             f"{pad_right(self.ui['col_action'], 22)} │"
         )
-        print("┌" + "─" * 20 + "┬" + "─" * 14 + "┬" + "─" * 16 + "┬" + "─" * 16 + "┬" + "─" * 11 + "┬" + "─" * 24 + "┐")
+        print("┌" + "─" * (w_proj + 2) + "┬" + "─" * (w_branch + 2) + "┬" + "─" * 16 + "┬" + "─" * 16 + "┬" + "─" * 11 + "┬" + "─" * 24 + "┐")
         print(header)
-        print("├" + "─" * 20 + "┼" + "─" * 14 + "┼" + "─" * 16 + "┼" + "─" * 16 + "┼" + "─" * 11 + "┼" + "─" * 24 + "┤")
+        print("├" + "─" * (w_proj + 2) + "┼" + "─" * (w_branch + 2) + "┼" + "─" * 16 + "┼" + "─" * 16 + "┼" + "─" * 11 + "┼" + "─" * 24 + "┤")
 
         for path, status in self.repos_status:
             # Format relative project name
@@ -225,6 +268,10 @@ class MainCLI:
                 proj_name = str(path.relative_to(self.sync_engine.scan_path))
             except ValueError:
                 proj_name = path.name
+
+            # Format fields with potential truncation
+            proj_name = truncate_left(proj_name, w_proj)
+            curr_branch = truncate_right(status.current_branch, w_branch)
 
             # Format File Status (Clean/Dirty)
             if status.is_dirty:
@@ -264,8 +311,8 @@ class MainCLI:
 
             # Print Row
             row = (
-                f"│ {pad_right(proj_name, 18)} │ "
-                f"{pad_right(status.current_branch, 12)} │ "
+                f"│ {pad_right(proj_name, w_proj)} │ "
+                f"{pad_right(curr_branch, w_branch)} │ "
                 f"{pad_right(status_str, 14)} │ "
                 f"{pad_right(sync_str, 14)} │ "
                 f"{pad_right(offset_str, 9)} │ "
@@ -273,9 +320,10 @@ class MainCLI:
             )
             print(row)
 
-        print("└" + "─" * 20 + "┴" + "─" * 14 + "┴" + "─" * 16 + "┴" + "─" * 16 + "┴" + "─" * 11 + "┴" + "─" * 24 + "┘")
+        print("└" + "─" * (w_proj + 2) + "┴" + "─" * (w_branch + 2) + "┴" + "─" * 16 + "┴" + "─" * 16 + "┴" + "─" * 11 + "┴" + "─" * 24 + "┘")
+        print("=" * total_width)
         print(self.ui["legend"])
-        print()
+        print("=" * total_width)
 
     def edit_config_menu(self) -> None:
         while True:
@@ -442,9 +490,8 @@ class MainCLI:
             print(self.ui["menu_opt_3"])
             print(self.ui["menu_opt_4"])
             print(self.ui["menu_opt_5"])
-            print(self.ui["menu_opt_6"])
-            print(self.ui["menu_opt_7"])
-            print()
+            print(self.ui["menu_opt_0"])
+            print("=" * self.total_width)
             
             choice = input(self.ui["prompt_choice"]).strip()
             
@@ -452,20 +499,35 @@ class MainCLI:
                 await self.run_sync_action("ALL")
                 elapsed = await self.scan_and_refresh()
             elif choice == "2":
-                await self.run_sync_action("PULL")
                 elapsed = await self.scan_and_refresh()
             elif choice == "3":
-                await self.run_sync_action("PUSH")
-                elapsed = await self.scan_and_refresh()
+                # Pull/Push Only submenu
+                while True:
+                    print("\n" + "=" * self.total_width)
+                    print(self.ui["submenu_title"])
+                    print("=" * self.total_width)
+                    print(self.ui["submenu_opt_1"])
+                    print(self.ui["submenu_opt_2"])
+                    print(self.ui["submenu_opt_3"])
+                    print("=" * self.total_width)
+                    sub_choice = input(self.ui["submenu_choice"]).strip()
+                    if sub_choice == "1":
+                        await self.run_sync_action("PULL")
+                        elapsed = await self.scan_and_refresh()
+                        break
+                    elif sub_choice == "2":
+                        await self.run_sync_action("PUSH")
+                        elapsed = await self.scan_and_refresh()
+                        break
+                    elif sub_choice == "3":
+                        break
             elif choice == "4":
-                elapsed = await self.scan_and_refresh()
-            elif choice == "5":
                 self.edit_config_menu()
                 elapsed = await self.scan_and_refresh()
-            elif choice == "6":
+            elif choice == "5":
                 print(self.ui["opening_folder"].format(self.config_manager.config_dir))
                 open_folder(self.config_manager.config_dir)
-            elif choice == "7":
+            elif choice == "0":
                 # Close front Terminal window on macOS or Command window on Windows
                 system = platform.system()
                 if system == "Darwin":
